@@ -17,13 +17,16 @@ import ods_external_data_pb2_grpc
 from external_file_data import ExternalFileData
 
 
-class CsvFileCache:
+class FileCache:
     def __init__(self, file_path: str, parameters: str | None):
         self.__lock = threading.Lock()
         self.__file_path = file_path
         self.__parameters: dict = json.loads(parameters) if parameters else {}
         self.__efd: ExternalFileData = None
         self.__datatypes = None
+
+    def not_my_file(self):
+        return self.__external_file_data().not_my_file()
 
     def close(self):
         with self.__lock:
@@ -141,7 +144,9 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
                           "Method not implemented!")
 
         identifier = self.connection_map[request.handle.uuid]
-        file: CsvFileCache = self.__get_file(request.handle)
+        file: FileCache = self.__get_file(request.handle)
+        if file.not_my_file():
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Not my file!")
 
         rv = exd_api.StructureResult(
             identifier=identifier,
@@ -313,14 +318,14 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             connection_id = self.__get_id(identifier)
             connection_url = self.__get_path(identifier.url)
             if connection_url not in self.file_map:
-                file_cache = CsvFileCache(
+                file_cache = FileCache(
                     connection_url, identifier.parameters)
                 self.file_map[connection_url] = {
                     "file": file_cache, "ref_count": 0}
             self.file_map[connection_url]["ref_count"] = self.file_map[connection_url]["ref_count"] + 1
             return connection_id
 
-    def __get_file(self, handle) -> CsvFileCache:
+    def __get_file(self, handle) -> FileCache:
         with self.lock:
             identifier = self.connection_map.get(handle.uuid)
             if identifier is None:

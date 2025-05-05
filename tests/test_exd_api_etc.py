@@ -1,10 +1,13 @@
 from google.protobuf.json_format import MessageToJson
+import grpc
 from external_data_reader import ExternalDataReader
 import ods_external_data_pb2 as oed
 import ods_pb2 as ods
 import unittest
 import pathlib
 import logging
+
+from tests.mock_servicer_context import MockServicerContext
 
 
 class TestExdApiEtc(unittest.TestCase):
@@ -255,3 +258,26 @@ class TestExdApiEtc(unittest.TestCase):
 
         finally:
             service.Close(handle, None)
+
+    def test_not_my_file(self):
+        context = MockServicerContext()
+        service = ExternalDataReader()
+        handle = service.Open(oed.Identifier(
+            url=self._get_example_file_path('example_semicolon.csv'),
+            parameters='{"sep":";"}'), context)
+        try:
+            service.GetStructure(oed.StructureRequest(handle=handle), context)
+        finally:
+            service.Close(handle, context)
+
+        handle = service.Open(oed.Identifier(
+            url=self._get_example_file_path('example_semicolon.csv'),
+            parameters='{"sep":","}'), context)
+        try:
+            with self.assertRaises(grpc.RpcError) as _:
+                service.GetStructure(
+                    oed.StructureRequest(handle=handle), context)
+            self.assertEqual(
+                context.code(), grpc.StatusCode.FAILED_PRECONDITION)
+        finally:
+            service.Close(handle, context)

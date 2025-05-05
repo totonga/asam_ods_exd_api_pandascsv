@@ -30,6 +30,22 @@ class ExternalFileData:
             self.log.info("Closing file: %s", self.__file_path)
             self.__df = None
 
+    def not_my_file(self):
+        """
+        Check if the file should be read with this plugin.
+        :return: True if the file should not be read with this plugin, False otherwise.
+        """
+
+        # If the CSV file contains only a single column or all columns have datatype string,
+        # we assume that it is not meant to be parsed with this plugin.
+        df = self.data()
+        if len(df.columns) == 1 or all(df.dtypes == 'object'):
+            self.log.info(
+                "File %s is not a valid CSV file for this plugin with parameters '%s'.",
+                self.__file_path, self.__parameters)
+            return True
+        return False
+
     def data(self) -> pd.DataFrame:
         """
         Read the data from the file and return it as a pandas DataFrame.

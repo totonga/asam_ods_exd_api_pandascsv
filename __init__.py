@@ -4,4 +4,4 @@ Module: asam_ods_exd_api_pandascsv
 This module initializes the package with essential metadata. The version attribute
 helps in tracking the current release of the package.
 """
-__version__ = "0.1.1"
+__version__ = "0.1.2"
