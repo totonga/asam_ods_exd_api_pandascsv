@@ -57,6 +57,10 @@ class CsvFileCache:
     def number_of_columns(self):
         return int(self.__data().shape[1])
 
+    def leading_independent(self) -> bool:
+        column: pd.Series = self.column_data(0)
+        return column.is_monotonic_increasing and column.is_unique
+
     def __data(self) -> pd.DataFrame:
         return self.__external_file_data().data()
 
@@ -164,6 +168,9 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
                 data_type=channel_datatype,
                 unit_string=channel_unit,
             )
+            if 0 == index and file.leading_independent():
+                new_channel.attributes.variables["independent"].long_array.values.append(
+                    1)
             # self.__add_attributes(channel.properties, new_channel.attributes)
             new_group.channels.append(new_channel)
 

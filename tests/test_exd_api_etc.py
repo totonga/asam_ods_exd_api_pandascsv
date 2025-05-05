@@ -233,3 +233,25 @@ class TestExdApiEtc(unittest.TestCase):
 
         finally:
             service.Close(handle, None)
+
+    def test_independent(self):
+        service = ExternalDataReader()
+        handle = service.Open(oed.Identifier(
+            url=self._get_example_file_path('example.csv'),
+            parameters=None), None)
+        try:
+            structure = service.GetStructure(
+                oed.StructureRequest(handle=handle), None)
+            self.assertEqual(structure.name, 'example.csv')
+            self.assertEqual(
+                structure.groups[0].channels[0].data_type, ods.DataTypeEnum.DT_LONGLONG)
+            self.assertEqual(
+                structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
+
+            self.assertEqual(
+                structure.groups[0].channels[0].attributes.variables.get("independent").long_array.values[0], 1)
+            self.assertIsNone(
+                structure.groups[0].channels[1].attributes.variables.get("independent"))
+
+        finally:
+            service.Close(handle, None)
