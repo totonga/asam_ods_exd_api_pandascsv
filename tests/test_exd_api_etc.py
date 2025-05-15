@@ -281,3 +281,33 @@ class TestExdApiEtc(unittest.TestCase):
                 context.code(), grpc.StatusCode.FAILED_PRECONDITION)
         finally:
             service.Close(handle, context)
+
+    def test_not_my_file1(self):
+        context = MockServicerContext()
+        service = ExternalDataReader()
+        handle = service.Open(oed.Identifier(
+            url=self._get_example_file_path('not_my_file1.csv'),
+            parameters='{"sep":","}'), context)
+        try:
+            with self.assertRaises(grpc.RpcError) as _:
+                service.GetStructure(
+                    oed.StructureRequest(handle=handle), context)
+            self.assertEqual(
+                context.code(), grpc.StatusCode.FAILED_PRECONDITION)
+        finally:
+            service.Close(handle, context)
+
+    def test_not_my_file2(self):
+        context = MockServicerContext()
+        service = ExternalDataReader()
+        handle = service.Open(oed.Identifier(
+            url=self._get_example_file_path('not_my_file2.csv'),
+            parameters='{"sep":","}'), context)
+        try:
+            with self.assertRaises(grpc.RpcError) as _:
+                service.GetStructure(
+                    oed.StructureRequest(handle=handle), context)
+            self.assertEqual(
+                context.code(), grpc.StatusCode.FAILED_PRECONDITION)
+        finally:
+            service.Close(handle, context)

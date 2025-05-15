@@ -25,9 +25,6 @@ class FileCache:
         self.__efd: ExternalFileData = None
         self.__datatypes = None
 
-    def not_my_file(self):
-        return self.__external_file_data().not_my_file()
-
     def close(self):
         with self.__lock:
             if self.__efd is not None:
@@ -35,24 +32,57 @@ class FileCache:
                 self.__efd = None
                 self.__datatypes = None
 
+    def column_datatype(self, index: int):
+        if self.__datatypes is None:
+            self.__datatypes = self.column_datatypes()
+
+        if index >= len(self.__datatypes):
+            raise IndexError(f'Column index {index} out of range!')
+        return self.__datatypes[index]
+
+    def column_data(self, index: int) -> pd.Series:
+        data = self.__data()
+        if index >= data.shape[1]:
+            raise IndexError(f'Column index {index} out of range!')
+        return data.iloc[:, index]
+
+    def not_my_file(self) -> bool:
+        if hasattr(self.__external_file_data(), 'not_my_file'):
+            return self.__external_file_data().not_my_file()
+        return False
+
     def file_attributes(self) -> dict:
-        rv = self.__external_file_data().file_attributes()
+        rv = None
+        if hasattr(self.__external_file_data(), 'file_attributes'):
+            rv = self.__external_file_data().file_attributes()
         return rv if rv is not None else {}
 
     def group_attributes(self) -> dict:
-        rv = self.__external_file_data().group_attributes()
+        rv = None
+        if hasattr(self.__external_file_data(), 'group_attributes'):
+            rv = self.__external_file_data().group_attributes()
         return rv if rv is not None else {}
 
     def column_names(self) -> list[str]:
-        rv = self.__external_file_data().column_names()
+        rv = None
+        if hasattr(self.__external_file_data(), 'column_names'):
+            rv = self.__external_file_data().column_names()
         return rv if rv is not None else self.__data().columns.tolist()
+
+    def column_units(self) -> list[str]:
+        rv = None
+        if hasattr(self.__external_file_data(), 'column_units'):
+            rv = self.__external_file_data().column_units()
+        return rv if rv is not None else [""] * self.number_of_columns()
+
+    def column_descriptions(self) -> list[str]:
+        rv = None
+        if hasattr(self.__external_file_data(), 'column_descriptions'):
+            rv = self.__external_file_data().column_descriptions()
+        return rv if rv is not None else [""] * self.number_of_columns()
 
     def column_datatypes(self) -> list[ods.DataTypeEnum]:
         return [self.__get_datatype(col_type) for col_type in self.__data().dtypes]
-
-    def column_units(self) -> list[str]:
-        rv = self.__external_file_data().column_units()
-        return rv if rv is not None else [""] * self.number_of_columns()
 
     def number_of_rows(self):
         return int(self.__data().shape[0])
@@ -73,20 +103,6 @@ class FileCache:
                 self.__efd = ExternalFileData(
                     self.__file_path, self.__parameters)
             return self.__efd
-
-    def column_datatype(self, index: int):
-        if self.__datatypes is None:
-            self.__datatypes = self.column_datatypes()
-
-        if index >= len(self.__datatypes):
-            raise IndexError(f'Column index {index} out of range!')
-        return self.__datatypes[index]
-
-    def column_data(self, index: int) -> pd.Series:
-        data = self.__data()
-        if index >= data.shape[1]:
-            raise IndexError(f'Column index {index} out of range!')
-        return data.iloc[:, index]
 
     def __get_datatype(self, data_type: np.dtype) -> ods.DataTypeEnum:
         if np.issubdtype(data_type, np.complex64):
@@ -164,8 +180,11 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         channel_names = file.column_names()
         channel_datatypes = file.column_datatypes()
         channel_units = file.column_units()
+        channel_descriptions = file.column_descriptions()
 
-        for index, (channel_name, channel_datatype, channel_unit) in enumerate(zip(channel_names, channel_datatypes, channel_units), start=0):
+        for index, (channel_name, channel_datatype, channel_unit, channel_description) in enumerate(
+                zip(channel_names, channel_datatypes, channel_units, channel_descriptions), start=0):
+
             new_channel = exd_api.StructureResult.Channel(
                 name=str(
                     channel_name) if channel_name is not None else f"Ch_{index}",
@@ -176,7 +195,9 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             if 0 == index and file.leading_independent():
                 new_channel.attributes.variables["independent"].long_array.values.append(
                     1)
-            # self.__add_attributes(channel.properties, new_channel.attributes)
+            if channel_description:
+                new_channel.attributes.variables["description"].string_array.values.append(
+                    channel_description)
             new_group.channels.append(new_channel)
 
         rv.groups.append(new_group)

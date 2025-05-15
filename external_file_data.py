@@ -39,7 +39,7 @@ class ExternalFileData:
         # If the CSV file contains only a single column or all columns have datatype string,
         # we assume that it is not meant to be parsed with this plugin.
         df = self.data()
-        if len(df.columns) == 1 or all(df.dtypes == 'object'):
+        if df.empty or len(df.columns) == 1 or all(df.dtypes == 'object'):
             self.log.info(
                 "File %s is not a valid CSV file for this plugin with parameters '%s'.",
                 self.__file_path, self.__parameters)
@@ -53,7 +53,12 @@ class ExternalFileData:
         """
         if self.__df is None:
             self.log.info("Reading file: %s", self.__file_path)
-            self.__df = pd.read_csv(self.__file_path, **self.__parameters)
+            try:
+                self.__df = pd.read_csv(self.__file_path, **self.__parameters)
+            except pd.errors.ParserError as e:
+                self.log.info("Not My File: Error reading file %s: %s",
+                              self.__file_path, e)
+                self.__df = pd.DataFrame()
         return self.__df
 
     def file_attributes(self) -> dict | None:
@@ -82,5 +87,12 @@ class ExternalFileData:
         """
         Allows to return column units of the dataframe.
         If None is returned, the units stay empty.
+        """
+        return None
+
+    def column_descriptions(self) -> list[str] | None:
+        """
+        Allows to return column description of the dataframe.
+        If None is returned, the description stay empty.
         """
         return None
