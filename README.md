@@ -16,13 +16,18 @@ python -m grpc_tools.protoc --proto_path=proto_src --pyi_out=. --python_out=. --
 
 ## Content
 
+### `external_file_data.py`
+
+Reads CSV files into pandas dataframe to be used by EXD-API.
+
 ### `exd_api_server.py`
 
 Runs the GRPC service to be accessed using http-2.
 
 ### `external_data_reader.py`
 
-Implements the EXD-API interface to access CSV files using pandas.
+Implements the EXD-API interface to allow simple pandas dataframe implementations.
+It includes data conversion and caching. The CSV implementation is given in `external_file_data.py`.
 
 ### `exd_api_test.py`
 
