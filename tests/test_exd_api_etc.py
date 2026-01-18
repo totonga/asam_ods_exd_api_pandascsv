@@ -1,6 +1,7 @@
 import unittest
 import pathlib
 import logging
+import base64
 
 import grpc
 from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
@@ -280,6 +281,33 @@ class TestExdApiEtc(unittest.TestCase):
         handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example_semicolon.csv'),
             parameters='{"sep":","}'), context)
+        try:
+            with self.assertRaises(grpc.RpcError) as e:
+                service.GetStructure(
+                    exd_api.StructureRequest(handle=handle), context)
+            self.assertEqual(
+                context.code(), grpc.StatusCode.FAILED_PRECONDITION)
+        finally:
+            service.Close(handle, context)
+
+    def _b64_param(self, val: str) -> str:
+        return f"B64:{base64.b64encode(val.encode('utf-8')).decode('utf-8')}"
+
+    def test_not_my_file_2(self):
+        context = MockServicerContext()
+        service = ExternalDataReader()
+        handle = service.Open(exd_api.Identifier(
+            url=self._get_example_file_path('example_semicolon.csv'),
+            parameters=self._b64_param('{"sep": ";"}')), context)
+        try:
+            service.GetStructure(
+                exd_api.StructureRequest(handle=handle), context)
+        finally:
+            service.Close(handle, context)
+
+        handle = service.Open(exd_api.Identifier(
+            url=self._get_example_file_path('example_semicolon.csv'),
+            parameters=self._b64_param('{"sep":","}')), context)
         try:
             with self.assertRaises(grpc.RpcError) as e:
                 service.GetStructure(

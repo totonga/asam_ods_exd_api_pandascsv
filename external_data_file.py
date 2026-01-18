@@ -4,12 +4,12 @@ from __future__ import annotations
 from typing import override
 import re
 import threading
-import json
 
 import numpy as np
 import pandas as pd
 
 from ods_exd_api_box import ExdFileInterface, exd_api, NotMyFileError, ods, serve_plugin
+from ods_exd_api_box.utils import ParamParser
 
 from external_file_data import ExternalFileData
 
@@ -18,10 +18,10 @@ from external_file_data import ExternalFileData
 
 
 class FileCache:
-    def __init__(self, file_path: str, parameters: str | None):
+    def __init__(self, file_path: str, parameters: dict):
         self.__lock = threading.Lock()
         self.__file_path = file_path
-        self.__parameters: dict = json.loads(parameters) if parameters else {}
+        self.__parameters: dict = parameters
         self.__efd: ExternalFileData = None
         self.__datatypes = None
 
@@ -147,7 +147,8 @@ class ExternalDataFile(ExdFileInterface):
 
     def __init__(self, file_path: str, parameters: str = ""):
 
-        self.file: FileCache = FileCache(file_path, parameters)
+        self.file: FileCache = FileCache(
+            file_path, ParamParser.parse_params(parameters))
 
     @override
     def close(self) -> None:
