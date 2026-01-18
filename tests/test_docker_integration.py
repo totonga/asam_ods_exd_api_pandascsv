@@ -1,16 +1,12 @@
 import pathlib
-import grpc
-import unittest
-import time
-import subprocess
-import logging
 import socket
+import subprocess
+import time
+import unittest
 
-import ods_external_data_pb2_grpc as exd_grpc
-import ods_external_data_pb2 as oed
-import ods_pb2 as ods
+import grpc
 
-from google.protobuf.json_format import MessageToJson
+from ods_exd_api_box import exd_api, exd_grpc, ods
 
 
 class TestDockerContainer(unittest.TestCase):
@@ -60,13 +56,12 @@ class TestDockerContainer(unittest.TestCase):
         with grpc.insecure_channel("localhost:50051") as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(oed.Identifier(
+            handle = service.Open(exd_api.Identifier(
                 url="/data/example.csv",
                 parameters=""), None)
             try:
                 structure = service.GetStructure(
-                    oed.StructureRequest(handle=handle), None)
-                logging.info(MessageToJson(structure))
+                    exd_api.StructureRequest(handle=handle), None)
 
                 self.assertEqual(structure.name, 'example.csv')
                 self.assertEqual(len(structure.groups), 1)
@@ -86,17 +81,17 @@ class TestDockerContainer(unittest.TestCase):
         with grpc.insecure_channel("localhost:50051") as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(oed.Identifier(
+            handle = service.Open(exd_api.Identifier(
                 url="/data/example.csv",
                 parameters=""), None)
 
             try:
-                values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                             group_id=0,
-                                                             channel_ids=[
-                                                                 0, 1],
-                                                             start=0,
-                                                             limit=4), None)
+                values = service.GetValues(exd_api.ValuesRequest(handle=handle,
+                                                                 group_id=0,
+                                                                 channel_ids=[
+                                                                     0, 1],
+                                                                 start=0,
+                                                                 limit=4), None)
 
                 self.assertEqual(values.id, 0)
                 self.assertEqual(len(values.channels), 2)
