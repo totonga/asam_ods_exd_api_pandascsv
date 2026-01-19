@@ -1,27 +1,27 @@
 """EXD API implementation for CSV files"""
-import os
-import numpy as np
-import pandas as pd
-from pathlib import Path
+
+from __future__ import annotations
+from typing import override
 import re
 import threading
-from urllib.parse import urlparse, unquote
-from urllib.request import url2pathname
-import json
 
-import grpc
-import ods_pb2 as ods
-import ods_external_data_pb2 as exd_api
-import ods_external_data_pb2_grpc
+import numpy as np
+import pandas as pd
+
+from ods_exd_api_box import ExdFileInterface, exd_api, NotMyFileError, ods, serve_plugin
+from ods_exd_api_box.utils import ParamParser
 
 from external_file_data import ExternalFileData
 
 
+# pylint: disable=no-member
+
+
 class FileCache:
-    def __init__(self, file_path: str, parameters: str | None):
+    def __init__(self, file_path: str, parameters: dict):
         self.__lock = threading.Lock()
         self.__file_path = file_path
-        self.__parameters: dict = json.loads(parameters) if parameters else {}
+        self.__parameters: dict = parameters
         self.__efd: ExternalFileData = None
         self.__datatypes = None
 
@@ -136,38 +136,37 @@ class FileCache:
         raise NotImplementedError(f'Unknown type {data_type}!')
 
 
-class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
+class ExternalDataFile(ExdFileInterface):
+    """Class for handling for NI tdms files."""
 
-    def Open(self, identifier: exd_api.Identifier, context: grpc.ServicerContext):
-        file_path = Path(self.__get_path(identifier.url))
-        if not file_path.is_file():
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          f"File '{identifier.url}' not found.")
+    @classmethod
+    @override
+    def create(cls, file_path: str, parameters: str) -> ExdFileInterface:
+        """Factory method to create a file handler instance."""
+        return cls(file_path, parameters)
 
-        connection_id = self.__open_file(identifier)
+    def __init__(self, file_path: str, parameters: str = ""):
 
-        rv = exd_api.Handle(uuid=connection_id)
-        return rv
+        self.file: FileCache = FileCache(
+            file_path, ParamParser.parse_params(parameters))
 
-    def Close(self, handle: exd_api.Handle, context: grpc.ServicerContext):
-        self.__close_file(handle)
-        return exd_api.Empty()
+    @override
+    def close(self) -> None:
+        if self.file is not None:
+            self.file.close()
+            del self.file
+            self.file = None
 
-    def GetStructure(self, request: exd_api.StructureRequest, context: grpc.ServicerContext):
+    @override
+    def fill_structure(self, structure: exd_api.StructureResult) -> None:
 
-        if request.suppress_channels or request.suppress_attributes or 0 != len(request.channel_names):
-            context.abort(grpc.StatusCode.UNIMPLEMENTED,
-                          "Method not implemented!")
+        file = self.file
 
-        identifier = self.connection_map[request.handle.uuid]
-        file: FileCache = self.__get_file(request.handle)
         if file.not_my_file():
-            context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Not my file!")
+            raise NotMyFileError
 
-        rv = exd_api.StructureResult(
-            identifier=identifier,
-            name=Path(identifier.url).name
-        )
+        rv = structure
+
         self.__add_attributes(file.file_attributes(), rv.attributes)
 
         new_group = exd_api.StructureResult.Group(
@@ -204,18 +203,18 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
 
         return rv
 
-    def GetValues(self, request: exd_api.ValuesExRequest, context: grpc.ServicerContext):
+    @override
+    def get_values(self, request: exd_api.ValuesRequest) -> exd_api.ValuesResult:
 
-        file = self.__get_file(request.handle)
+        file = self.file
 
         if request.group_id != 0:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          f'Invalid group id {request.group_id}!')
+            raise ValueError(f'Invalid group id {request.group_id}!')
 
         nr_of_rows = file.number_of_rows()
         if request.start >= nr_of_rows:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          f'Channel start index {request.start} out of range!')
+            raise ValueError(
+                f'Channel start index {request.start} out of range!')
 
         end_index = request.start + request.limit
         if end_index >= nr_of_rows:
@@ -224,8 +223,7 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         rv = exd_api.ValuesResult(id=request.group_id)
         for channel_index in request.channel_ids:
             if channel_index >= file.number_of_columns():
-                context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                              f'Invalid channel id {channel_index}!')
+                raise ValueError(f'Invalid channel id {channel_index}!')
 
             column_data_type = file.column_datatype(channel_index)
             channel = file.column_data(channel_index)
@@ -277,15 +275,12 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
                     real_values.append(complex_value.imag)
                 new_channel_values.values.double_array.values[:] = real_values
             else:
-                context.abort(grpc.StatusCode.UNIMPLEMENTED,
-                              f'Not implemented channel type {column_data_type}!')
+                raise NotImplementedError(
+                    f'Not implemented channel type {column_data_type}!')
 
             rv.channels.append(new_channel_values)
 
         return rv
-
-    def GetValuesEx(self, request, context: grpc.ServicerContext):
-        context.abort(grpc.StatusCode.UNIMPLEMENTED, "Method not implemented!")
 
     def __to_asam_ods_time(self, datetime_value):
         return re.sub("[^0-9]", "", str(datetime_value))
@@ -295,7 +290,7 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             return
 
         if not isinstance(properties, dict):
-            raise Exception(f'Attribute "{properties}" is not a dictionary!')
+            raise ValueError(f'Attribute "{properties}" is not a dictionary!')
 
         for name, value in properties.items():
             if isinstance(value, str):
@@ -308,61 +303,9 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
                 attributes.variables[name].string_array.values.append(
                     self.__to_asam_ods_time(value))
             else:
-                raise Exception(
+                raise ValueError(
                     f'Attribute "{name}": "{value}" not assignable')
 
-    def __init__(self):
-        self.connect_count: int = 0
-        self.connection_map: dict[str, exd_api.Identifier] = {}
-        self.file_map: dict = {}
-        self.lock = threading.Lock()
 
-    def __get_id(self, identifier: exd_api.Identifier) -> str:
-        self.connect_count = self.connect_count + 1
-        rv = str(self.connect_count)
-        self.connection_map[rv] = identifier
-        return rv
-
-    def __uri_to_path(self, uri: str) -> str:
-        parsed = urlparse(uri)
-        host = "{0}{0}{mnt}{0}".format(os.path.sep, mnt=parsed.netloc)
-        return os.path.normpath(
-            os.path.join(host, url2pathname(unquote(parsed.path)))
-        )
-
-    def __get_path(self, file_url) -> str:
-        final_path = self.__uri_to_path(file_url)
-        return final_path
-
-    def __open_file(self, identifier) -> str:
-        with self.lock:
-            connection_id = self.__get_id(identifier)
-            connection_url = self.__get_path(identifier.url)
-            if connection_url not in self.file_map:
-                file_cache = FileCache(
-                    connection_url, identifier.parameters)
-                self.file_map[connection_url] = {
-                    "file": file_cache, "ref_count": 0}
-            self.file_map[connection_url]["ref_count"] = self.file_map[connection_url]["ref_count"] + 1
-            return connection_id
-
-    def __get_file(self, handle) -> FileCache:
-        with self.lock:
-            identifier = self.connection_map.get(handle.uuid)
-            if identifier is None:
-                raise ValueError(f'Handle "{handle.uuid}" not found!')
-            connection_url = self.__get_path(identifier.url)
-            return self.file_map.get(connection_url).get("file")
-
-    def __close_file(self, handle):
-        with self.lock:
-            identifier = self.connection_map.get(handle.uuid)
-            if identifier is None:
-                raise ValueError(
-                    f'Handle "{handle.uuid}" not found! Unable to close file!')
-            connection_url = self.__get_path(identifier.url)
-            if self.file_map.get(connection_url).get("ref_count") > 1:
-                self.file_map[connection_url]["ref_count"] = self.file_map[connection_url]["ref_count"] - 1
-            else:
-                self.file_map.get(connection_url).get("file").close()
-                del self.file_map[connection_url]
+if __name__ == "__main__":
+    serve_plugin("PANDASCSV", ExternalDataFile.create, ["*.csv"])

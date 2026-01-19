@@ -13,10 +13,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Extract version number
+      - name: Extract version and package name
         run: |
-          VERSION=$(grep -oP '(?<=__version__ = ")[^"]+' __init__.py)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          python3 << 'EOF'
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          with open('$GITHUB_ENV', 'a') as env_file:
+              env_file.write(f"VERSION={data['project']['version']}\n")
+              env_file.write(f"PACKAGE_NAME={data['project']['name']}\n")
+          EOF
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -35,5 +41,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/asam-ods-exd-api-pandascsv:latest
-            ghcr.io/${{ github.repository_owner }}/asam-ods-exd-api-pandascsv:${{ env.VERSION }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.PACKAGE_NAME }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ env.PACKAGE_NAME }}:${{ env.VERSION }}

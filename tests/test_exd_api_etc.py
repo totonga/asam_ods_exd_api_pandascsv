@@ -1,17 +1,24 @@
-from google.protobuf.json_format import MessageToJson
-import grpc
-from external_data_reader import ExternalDataReader
-import ods_external_data_pb2 as oed
-import ods_pb2 as ods
 import unittest
 import pathlib
 import logging
+import base64
 
+import grpc
+from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
+from external_data_file import ExternalDataFile
 from tests.mock_servicer_context import MockServicerContext
+
+# pylint: disable=no-member
 
 
 class TestExdApiEtc(unittest.TestCase):
     log = logging.getLogger(__name__)
+
+    def setUp(self):
+        """Register ExternalDataFile handler before each test."""
+        FileHandlerRegistry.register(
+            file_type_name="test", factory=ExternalDataFile)
+        self.context = MockServicerContext()
 
     def _get_example_file_path(self, file_name):
         example_file_path = pathlib.Path.joinpath(pathlib.Path(
@@ -20,12 +27,12 @@ class TestExdApiEtc(unittest.TestCase):
 
     def test_semicolon_parameters(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example_semicolon.csv'),
-            parameters='{"sep":";"}'), None)
+            parameters='{"sep":";"}'), self.context)
         try:
             structure = service.GetStructure(
-                oed.StructureRequest(handle=handle), None)
+                exd_api.StructureRequest(handle=handle), self.context)
             self.assertEqual(structure.name, 'example_semicolon.csv')
             self.assertEqual(len(structure.groups), 1)
             self.assertEqual(structure.groups[0].number_of_rows, 3)
@@ -38,16 +45,16 @@ class TestExdApiEtc(unittest.TestCase):
             self.assertEqual(
                 structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
 
-            values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                         group_id=0,
-                                                         channel_ids=[0, 1],
-                                                         start=0,
-                                                         limit=4), None)
+            values = service.GetValues(exd_api.ValuesRequest(handle=handle,
+                                                             group_id=0,
+                                                             channel_ids=[
+                                                                 0, 1],
+                                                             start=0,
+                                                             limit=4), self.context)
             self.assertEqual(values.id, 0)
             self.assertEqual(len(values.channels), 2)
             self.assertEqual(values.channels[0].id, 0)
             self.assertEqual(values.channels[1].id, 1)
-            self.log.info(MessageToJson(values))
 
             self.assertEqual(
                 values.channels[0].values.data_type, ods.DataTypeEnum.DT_LONGLONG)
@@ -59,16 +66,16 @@ class TestExdApiEtc(unittest.TestCase):
                                      2.1, 2.2, 2.3])
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_comma_parameters(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example.csv'),
-            parameters='{"sep":","}'), None)
+            parameters='{"sep":","}'), self.context)
         try:
             structure = service.GetStructure(
-                oed.StructureRequest(handle=handle), None)
+                exd_api.StructureRequest(handle=handle), self.context)
             self.assertEqual(structure.name, 'example.csv')
             self.assertEqual(len(structure.groups), 1)
             self.assertEqual(structure.groups[0].number_of_rows, 3)
@@ -81,16 +88,16 @@ class TestExdApiEtc(unittest.TestCase):
             self.assertEqual(
                 structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
 
-            values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                         group_id=0,
-                                                         channel_ids=[0, 1],
-                                                         start=0,
-                                                         limit=4), None)
+            values = service.GetValues(exd_api.ValuesRequest(handle=handle,
+                                                             group_id=0,
+                                                             channel_ids=[
+                                                                 0, 1],
+                                                             start=0,
+                                                             limit=4), self.context)
             self.assertEqual(values.id, 0)
             self.assertEqual(len(values.channels), 2)
             self.assertEqual(values.channels[0].id, 0)
             self.assertEqual(values.channels[1].id, 1)
-            self.log.info(MessageToJson(values))
 
             self.assertEqual(
                 values.channels[0].values.data_type, ods.DataTypeEnum.DT_LONGLONG)
@@ -102,16 +109,16 @@ class TestExdApiEtc(unittest.TestCase):
                                      2.1, 2.2, 2.3])
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_default(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example.csv'),
-            parameters=None), None)
+            parameters=None), self.context)
         try:
             structure = service.GetStructure(
-                oed.StructureRequest(handle=handle), None)
+                exd_api.StructureRequest(handle=handle), self.context)
             self.assertEqual(structure.name, 'example.csv')
             self.assertEqual(len(structure.groups), 1)
             self.assertEqual(structure.groups[0].number_of_rows, 3)
@@ -124,16 +131,16 @@ class TestExdApiEtc(unittest.TestCase):
             self.assertEqual(
                 structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
 
-            values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                         group_id=0,
-                                                         channel_ids=[0, 1],
-                                                         start=0,
-                                                         limit=4), None)
+            values = service.GetValues(exd_api.ValuesRequest(handle=handle,
+                                                             group_id=0,
+                                                             channel_ids=[
+                                                                 0, 1],
+                                                             start=0,
+                                                             limit=4), self.context)
             self.assertEqual(values.id, 0)
             self.assertEqual(len(values.channels), 2)
             self.assertEqual(values.channels[0].id, 0)
             self.assertEqual(values.channels[1].id, 1)
-            self.log.info(MessageToJson(values))
 
             self.assertEqual(
                 values.channels[0].values.data_type, ods.DataTypeEnum.DT_LONGLONG)
@@ -145,16 +152,16 @@ class TestExdApiEtc(unittest.TestCase):
                                      2.1, 2.2, 2.3])
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_no_header(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example_no_header.csv'),
-            parameters='{"header":null}'), None)
+            parameters='{"header":null}'), self.context)
         try:
             structure = service.GetStructure(
-                oed.StructureRequest(handle=handle), None)
+                exd_api.StructureRequest(handle=handle), self.context)
             self.assertEqual(structure.name, 'example_no_header.csv')
             self.assertEqual(len(structure.groups), 1)
             self.assertEqual(structure.groups[0].number_of_rows, 3)
@@ -169,16 +176,16 @@ class TestExdApiEtc(unittest.TestCase):
             self.assertEqual(
                 structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
 
-            values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                         group_id=0,
-                                                         channel_ids=[0, 1],
-                                                         start=0,
-                                                         limit=4), None)
+            values = service.GetValues(exd_api.ValuesRequest(handle=handle,
+                                                             group_id=0,
+                                                             channel_ids=[
+                                                                 0, 1],
+                                                             start=0,
+                                                             limit=4), self.context)
             self.assertEqual(values.id, 0)
             self.assertEqual(len(values.channels), 2)
             self.assertEqual(values.channels[0].id, 0)
             self.assertEqual(values.channels[1].id, 1)
-            self.log.info(MessageToJson(values))
 
             self.assertEqual(
                 values.channels[0].values.data_type, ods.DataTypeEnum.DT_LONGLONG)
@@ -190,16 +197,16 @@ class TestExdApiEtc(unittest.TestCase):
                                      2.1, 2.2, 2.3])
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_no_header2(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example_no_header.csv'),
-            parameters='{"header":null,"names":["d", "e", "f"]}'), None)
+            parameters='{"header":null,"names":["d", "e", "f"]}'), self.context)
         try:
             structure = service.GetStructure(
-                oed.StructureRequest(handle=handle), None)
+                exd_api.StructureRequest(handle=handle), self.context)
             self.assertEqual(structure.name, 'example_no_header.csv')
             self.assertEqual(len(structure.groups), 1)
             self.assertEqual(structure.groups[0].number_of_rows, 3)
@@ -214,16 +221,16 @@ class TestExdApiEtc(unittest.TestCase):
             self.assertEqual(
                 structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
 
-            values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                         group_id=0,
-                                                         channel_ids=[0, 1],
-                                                         start=0,
-                                                         limit=4), None)
+            values = service.GetValues(exd_api.ValuesRequest(handle=handle,
+                                                             group_id=0,
+                                                             channel_ids=[
+                                                                 0, 1],
+                                                             start=0,
+                                                             limit=4), self.context)
             self.assertEqual(values.id, 0)
             self.assertEqual(len(values.channels), 2)
             self.assertEqual(values.channels[0].id, 0)
             self.assertEqual(values.channels[1].id, 1)
-            self.log.info(MessageToJson(values))
 
             self.assertEqual(
                 values.channels[0].values.data_type, ods.DataTypeEnum.DT_LONGLONG)
@@ -235,16 +242,16 @@ class TestExdApiEtc(unittest.TestCase):
                                      2.1, 2.2, 2.3])
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_independent(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example.csv'),
-            parameters=None), None)
+            parameters=None), self.context)
         try:
             structure = service.GetStructure(
-                oed.StructureRequest(handle=handle), None)
+                exd_api.StructureRequest(handle=handle), self.context)
             self.assertEqual(structure.name, 'example.csv')
             self.assertEqual(
                 structure.groups[0].channels[0].data_type, ods.DataTypeEnum.DT_LONGLONG)
@@ -257,26 +264,54 @@ class TestExdApiEtc(unittest.TestCase):
                 structure.groups[0].channels[1].attributes.variables.get("independent"))
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_not_my_file(self):
         context = MockServicerContext()
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example_semicolon.csv'),
             parameters='{"sep":";"}'), context)
         try:
-            service.GetStructure(oed.StructureRequest(handle=handle), context)
+            service.GetStructure(
+                exd_api.StructureRequest(handle=handle), context)
         finally:
             service.Close(handle, context)
 
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example_semicolon.csv'),
             parameters='{"sep":","}'), context)
         try:
-            with self.assertRaises(grpc.RpcError) as _:
+            with self.assertRaises(grpc.RpcError) as e:
                 service.GetStructure(
-                    oed.StructureRequest(handle=handle), context)
+                    exd_api.StructureRequest(handle=handle), context)
+            self.assertEqual(
+                context.code(), grpc.StatusCode.FAILED_PRECONDITION)
+        finally:
+            service.Close(handle, context)
+
+    def _b64_param(self, val: str) -> str:
+        return f"B64:{base64.b64encode(val.encode('utf-8')).decode('utf-8')}"
+
+    def test_not_my_file_2(self):
+        context = MockServicerContext()
+        service = ExternalDataReader()
+        handle = service.Open(exd_api.Identifier(
+            url=self._get_example_file_path('example_semicolon.csv'),
+            parameters=self._b64_param('{"sep": ";"}')), context)
+        try:
+            service.GetStructure(
+                exd_api.StructureRequest(handle=handle), context)
+        finally:
+            service.Close(handle, context)
+
+        handle = service.Open(exd_api.Identifier(
+            url=self._get_example_file_path('example_semicolon.csv'),
+            parameters=self._b64_param('{"sep":","}')), context)
+        try:
+            with self.assertRaises(grpc.RpcError) as e:
+                service.GetStructure(
+                    exd_api.StructureRequest(handle=handle), context)
             self.assertEqual(
                 context.code(), grpc.StatusCode.FAILED_PRECONDITION)
         finally:
@@ -285,13 +320,13 @@ class TestExdApiEtc(unittest.TestCase):
     def test_not_my_file1(self):
         context = MockServicerContext()
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('not_my_file1.csv'),
             parameters='{"sep":","}'), context)
         try:
             with self.assertRaises(grpc.RpcError) as _:
                 service.GetStructure(
-                    oed.StructureRequest(handle=handle), context)
+                    exd_api.StructureRequest(handle=handle), context)
             self.assertEqual(
                 context.code(), grpc.StatusCode.FAILED_PRECONDITION)
         finally:
@@ -300,13 +335,13 @@ class TestExdApiEtc(unittest.TestCase):
     def test_not_my_file2(self):
         context = MockServicerContext()
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('not_my_file2.csv'),
             parameters='{"sep":","}'), context)
         try:
             with self.assertRaises(grpc.RpcError) as _:
                 service.GetStructure(
-                    oed.StructureRequest(handle=handle), context)
+                    exd_api.StructureRequest(handle=handle), context)
             self.assertEqual(
                 context.code(), grpc.StatusCode.FAILED_PRECONDITION)
         finally:

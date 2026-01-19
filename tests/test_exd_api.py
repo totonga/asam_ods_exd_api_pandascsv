@@ -1,14 +1,22 @@
-from google.protobuf.json_format import MessageToJson
-from external_data_reader import ExternalDataReader
-import ods_external_data_pb2 as oed
-import ods_pb2 as ods
 import unittest
 import pathlib
 import logging
 
+from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
+from external_data_file import ExternalDataFile
+from tests.mock_servicer_context import MockServicerContext
+
+# pylint: disable=no-member
+
 
 class TestExdApi(unittest.TestCase):
     log = logging.getLogger(__name__)
+
+    def setUp(self):
+        """Register ExternalDataFile handler before each test."""
+        FileHandlerRegistry.register(
+            file_type_name="test", factory=ExternalDataFile)
+        self.context = MockServicerContext()
 
     def _get_example_file_path(self, file_name):
         example_file_path = pathlib.Path.joinpath(pathlib.Path(
@@ -17,23 +25,22 @@ class TestExdApi(unittest.TestCase):
 
     def test_open(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example.csv'),
-            parameters=""), None)
+            parameters=""), self.context)
         try:
             pass
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_structure(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example.csv'),
-            parameters=""), None)
+            parameters=""), self.context)
         try:
             structure = service.GetStructure(
-                oed.StructureRequest(handle=handle), None)
-            self.log.info(MessageToJson(structure))
+                exd_api.StructureRequest(handle=handle), self.context)
 
             self.assertEqual(structure.name, 'example.csv')
             self.assertEqual(len(structure.groups), 1)
@@ -47,24 +54,24 @@ class TestExdApi(unittest.TestCase):
             self.assertEqual(
                 structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
 
     def test_get_values(self):
         service = ExternalDataReader()
-        handle = service.Open(oed.Identifier(
+        handle = service.Open(exd_api.Identifier(
             url=self._get_example_file_path('example.csv'),
-            parameters=""), None)
+            parameters=""), self.context)
         try:
-            values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                         group_id=0,
-                                                         channel_ids=[0, 1],
-                                                         start=0,
-                                                         limit=4), None)
+            values = service.GetValues(exd_api.ValuesRequest(handle=handle,
+                                                             group_id=0,
+                                                             channel_ids=[
+                                                                 0, 1],
+                                                             start=0,
+                                                             limit=4), self.context)
             self.assertEqual(values.id, 0)
             self.assertEqual(len(values.channels), 2)
             self.assertEqual(values.channels[0].id, 0)
             self.assertEqual(values.channels[1].id, 1)
-            self.log.info(MessageToJson(values))
 
             self.assertEqual(
                 values.channels[0].values.data_type, ods.DataTypeEnum.DT_LONGLONG)
@@ -76,4 +83,4 @@ class TestExdApi(unittest.TestCase):
                                      2.1, 2.2, 2.3])
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, self.context)
