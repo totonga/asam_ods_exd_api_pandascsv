@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "asam_ods_exd_api_pandascsv"
+name = "asam-ods-exd-api-pandascsv"
 version = "0.5.2"
 description = "ASAM ODS EXD API plugin that uses pandas to read CSV files."
 readme = "README.md"
@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/totonga/asam-ods-exd-api-pandascsv"
+Homepage = "https://github.com/totonga/asam_ods_exd_api_pandascsv"
 
 [tool.pylint.messages_control]
 disable = [
