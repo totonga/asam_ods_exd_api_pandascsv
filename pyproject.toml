@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "asam_ods_exd_api_pandascsv"
-version = "0.5.0"
+version = "0.5.2"
 description = "ASAM ODS EXD API plugin that uses pandas to read CSV files."
 readme = "README.md"
 requires-python = ">=3.12"
