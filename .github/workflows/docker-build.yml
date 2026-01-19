@@ -19,7 +19,7 @@ jobs:
           import tomllib
           with open('pyproject.toml', 'rb') as f:
               data = tomllib.load(f)
-          with open('$GITHUB_ENV', 'a') as env_file:
+          with open("${GITHUB_ENV}", 'a') as env_file:
               env_file.write(f"VERSION={data['project']['version']}\n")
               env_file.write(f"PACKAGE_NAME={data['project']['name']}\n")
           EOF
