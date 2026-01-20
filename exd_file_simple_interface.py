@@ -5,41 +5,15 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 
-class ExdApiSimple(ABC):
+class ExdFileSimpleInterface(ABC):
     """
     Class to read data from an external file using pandas.
     """
 
-    _implementation: type["ExdApiSimple"] | None = None
-
     @classmethod
-    def register(cls, implementation: type["ExdApiSimple"]) -> None:
-        """Register a concrete implementation.
-
-        Args:
-            implementation: The concrete class implementing ExdApiSimple
-        """
-        cls._implementation = implementation
-
-    @classmethod
-    def create(cls, file_path: str, parameters: dict) -> "ExdApiSimple":
-        """Factory method to create a file handler instance.
-
-        Args:
-            file_path: Path to the external data file
-            parameters: Optional parameters for file handling
-
-        Returns:
-            An instance of the file handler
-
-        Raises:
-            RuntimeError: If no implementation is registered
-        """
-        if cls is ExdApiSimple:
-            if cls._implementation is None:
-                raise RuntimeError("No implementation registered. Call ExdApiSimple.register() first.")
-            return cls._implementation.create(file_path, parameters)
-        raise NotImplementedError(f"Subclass {cls.__name__} must implement create()")
+    @abstractmethod
+    def create(cls, file_path: str, parameters: dict) -> "ExdFileSimpleInterface":
+        """Factory method to create a file handler instance."""
 
     @abstractmethod
     def close(self) -> None:

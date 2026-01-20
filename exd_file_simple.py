@@ -4,26 +4,60 @@
 from __future__ import annotations
 
 import threading
-from typing import override
+from typing import Callable, override
 
 import numpy as np
 import pandas as pd
-from ods_exd_api_box import ExdFileInterface, NotMyFileError, exd_api, ods
+from ods_exd_api_box import ExdFileInterface, NotMyFileError, exd_api, ods, serve_plugin
 from ods_exd_api_box.utils import ParamParser
 from ods_exd_api_box.utils.attribute_helper import AttributeHelper
 from ods_exd_api_box.utils.time_helper import TimeHelper
 
-from exd_api_simple import ExdApiSimple
+from exd_file_simple_interface import ExdFileSimpleInterface
 
 # pylint: disable=no-member
 
 
-class FileCache:
+class ExdFileSimpleRegistry:
+    """Registry for managing ExdFileSimple implementations."""
+
+    _file_type_factory: Callable[[str, dict], ExdFileSimpleInterface] | None = None
+
+    @classmethod
+    def register(cls, file_type_factory: Callable[[str, dict], ExdFileSimpleInterface]) -> None:
+        """Register a concrete implementation.
+
+        Args:
+            file_type_factory: The factory function creating ExdApiSimple instances
+        """
+        cls._file_type_factory = file_type_factory
+
+    @classmethod
+    def create(cls, file_path: str, parameters: dict) -> ExdFileSimpleInterface:
+        """Factory method to create a file handler instance.
+
+        Args:
+            file_path: Path to the external data file
+            parameters: Optional parameters for file handling
+
+        Returns:
+            An instance of the file handler
+
+        Raises:
+            RuntimeError: If no implementation is registered
+        """
+
+        if cls._file_type_factory is None or not callable(cls._file_type_factory):
+            raise RuntimeError("No implementation registered. Call ExdFileSimpleRegistry.register() first.")
+        return cls._file_type_factory(file_path, parameters)  # pylint: disable=not-callable
+
+
+class ExdFileSimpleCache:
     def __init__(self, file_path: str, parameters: dict):
         self._lock = threading.Lock()
         self._file_path = file_path
         self._parameters: dict = parameters
-        self._edp: ExdApiSimple | None = None
+        self._edp: ExdFileSimpleInterface | None = None
         self._datatypes: list[ods.DataTypeEnum] | None = None
 
     def close(self):
@@ -82,10 +116,10 @@ class FileCache:
     def __data(self) -> pd.DataFrame:
         return self._external_data_pandas().data()
 
-    def _external_data_pandas(self) -> ExdApiSimple:
+    def _external_data_pandas(self) -> ExdFileSimpleInterface:
         with self._lock:
             if self._edp is None:
-                self._edp = ExdApiSimple.create(self._file_path, self._parameters)
+                self._edp = ExdFileSimpleRegistry.create(self._file_path, self._parameters)
             return self._edp
 
     def _get_datatype(self, data_type: np.dtype) -> ods.DataTypeEnum:
@@ -120,7 +154,7 @@ class FileCache:
         raise NotImplementedError(f"Unknown type {data_type}!")
 
 
-class ExdApiSimpleImpl(ExdFileInterface):
+class ExdFileSimple(ExdFileInterface):
     """Class for handling file content."""
 
     @classmethod
@@ -131,7 +165,7 @@ class ExdApiSimpleImpl(ExdFileInterface):
 
     def __init__(self, file_path: str, parameters: str = ""):
 
-        self.file: FileCache | None = FileCache(file_path, ParamParser.parse_params(parameters))
+        self.file: ExdFileSimpleCache | None = ExdFileSimpleCache(file_path, ParamParser.parse_params(parameters))
 
     @override
     def close(self) -> None:
@@ -144,6 +178,8 @@ class ExdApiSimpleImpl(ExdFileInterface):
     def fill_structure(self, structure: exd_api.StructureResult) -> None:
 
         file = self.file
+        if file is None:
+            raise RuntimeError("File is not opened!")
 
         if file.not_my_file():
             raise NotMyFileError
@@ -188,6 +224,8 @@ class ExdApiSimpleImpl(ExdFileInterface):
     def get_values(self, request: exd_api.ValuesRequest) -> exd_api.ValuesResult:
 
         file = self.file
+        if file is None:
+            raise RuntimeError("File is not opened!")
 
         if request.group_id != 0:
             raise ValueError(f"Invalid group id {request.group_id}!")
@@ -252,3 +290,12 @@ class ExdApiSimpleImpl(ExdFileInterface):
             rv.channels.append(new_channel_values)
 
         return rv
+
+
+def serve_plugin_simple(
+    file_type_name: str,
+    file_type_factory: Callable[[str, dict], ExdFileSimpleInterface],
+    file_type_file_patterns: list[str] | None = None,
+):
+    ExdFileSimpleRegistry.register(file_type_factory)
+    serve_plugin(file_type_name, ExdFileSimple.create, file_type_file_patterns)
