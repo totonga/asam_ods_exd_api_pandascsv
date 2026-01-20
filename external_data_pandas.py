@@ -10,9 +10,19 @@ class ExternalDataPandas(ABC):
     Class to read data from an external file using pandas.
     """
 
+    _implementation: type["ExternalDataPandas"] | None = None
+
     @classmethod
-    @abstractmethod
-    def create(cls, file_path: str, parameters: str) -> "ExternalDataPandas":
+    def register(cls, implementation: type["ExternalDataPandas"]) -> None:
+        """Register a concrete implementation.
+
+        Args:
+            implementation: The concrete class implementing ExternalDataPandas
+        """
+        cls._implementation = implementation
+
+    @classmethod
+    def create(cls, file_path: str, parameters: dict) -> "ExternalDataPandas":
         """Factory method to create a file handler instance.
 
         Args:
@@ -21,7 +31,15 @@ class ExternalDataPandas(ABC):
 
         Returns:
             An instance of the file handler
+
+        Raises:
+            RuntimeError: If no implementation is registered
         """
+        if cls is ExternalDataPandas:
+            if cls._implementation is None:
+                raise RuntimeError("No implementation registered. Call ExternalDataPandas.register() first.")
+            return cls._implementation.create(file_path, parameters)
+        raise NotImplementedError(f"Subclass {cls.__name__} must implement create()")
 
     @abstractmethod
     def close(self) -> None:

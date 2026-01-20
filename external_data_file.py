@@ -8,13 +8,12 @@ from typing import override
 
 import numpy as np
 import pandas as pd
-from ods_exd_api_box import ExdFileInterface, NotMyFileError, exd_api, ods, serve_plugin
+from ods_exd_api_box import ExdFileInterface, NotMyFileError, exd_api, ods
 from ods_exd_api_box.utils import ParamParser
 from ods_exd_api_box.utils.attribute_helper import AttributeHelper
 from ods_exd_api_box.utils.time_helper import TimeHelper
 
 from external_data_pandas import ExternalDataPandas
-from external_file_data import ExternalFileData
 
 # pylint: disable=no-member
 
@@ -86,7 +85,7 @@ class FileCache:
     def _external_data_pandas(self) -> ExternalDataPandas:
         with self._lock:
             if self._edp is None:
-                self._edp = ExternalFileData.create(self._file_path, self._parameters)
+                self._edp = ExternalDataPandas.create(self._file_path, self._parameters)
             return self._edp
 
     def _get_datatype(self, data_type: np.dtype) -> ods.DataTypeEnum:
@@ -253,7 +252,3 @@ class ExternalDataFile(ExdFileInterface):
             rv.channels.append(new_channel_values)
 
         return rv
-
-
-if __name__ == "__main__":
-    serve_plugin("PANDASCSV", ExternalDataFile.create, ["*.csv"])

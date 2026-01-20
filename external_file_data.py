@@ -74,3 +74,11 @@ class ExternalFileData(ExternalDataPandas):
                 self.log.info("Not My File: Error reading file %s: %s", self.file_path, e)
                 self.df = pd.DataFrame()
         return self.df
+
+
+if __name__ == "__main__":
+    from ods_exd_api_box import serve_plugin
+    from external_data_file import ExternalDataFile
+
+    ExternalDataPandas.register(ExternalFileData)
+    serve_plugin("PANDASCSV", ExternalDataFile.create, ["*.csv"])

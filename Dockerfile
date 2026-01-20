@@ -15,4 +15,4 @@ RUN pip3 install --upgrade pip && pip3 install .
 COPY external_data_file.py external_file_data.py external_data_pandas.py ./
 USER appuser
 # Start server
-CMD [ "python3", "external_data_file.py"]
+CMD [ "python3", "external_file_data.py"]
