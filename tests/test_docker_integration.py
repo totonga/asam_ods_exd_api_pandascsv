@@ -8,11 +8,13 @@ import grpc
 
 from ods_exd_api_box import exd_api, exd_grpc, ods
 
+# pylint: disable=no-member
+
 
 class TestDockerContainer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Docker-Image bauen
+        # build docker image
         subprocess.run(
             ["docker", "build", "-t", "asam-ods-exd-api-pandascsv", "."], check=True)
 
@@ -30,7 +32,7 @@ class TestDockerContainer(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # Container stoppen
+        # stop container
         subprocess.run(["docker", "stop", "test_container"], check=True)
 
     @classmethod

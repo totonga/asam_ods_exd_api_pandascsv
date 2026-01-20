@@ -282,7 +282,7 @@ class TestExdApiEtc(unittest.TestCase):
             url=self._get_example_file_path('example_semicolon.csv'),
             parameters='{"sep":","}'), context)
         try:
-            with self.assertRaises(grpc.RpcError) as e:
+            with self.assertRaises(grpc.RpcError) as _:
                 service.GetStructure(
                     exd_api.StructureRequest(handle=handle), context)
             self.assertEqual(
@@ -309,7 +309,7 @@ class TestExdApiEtc(unittest.TestCase):
             url=self._get_example_file_path('example_semicolon.csv'),
             parameters=self._b64_param('{"sep":","}')), context)
         try:
-            with self.assertRaises(grpc.RpcError) as e:
+            with self.assertRaises(grpc.RpcError) as _:
                 service.GetStructure(
                     exd_api.StructureRequest(handle=handle), context)
             self.assertEqual(
