@@ -5,8 +5,8 @@ import unittest
 from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
 
 from external_data.external_data_file import ExternalFileData
-from external_data_file import ExternalDataFile
-from external_data_pandas import ExternalDataPandas
+from exd_api_simple_impl import ExdApiSimpleImpl
+from exd_api_simple import ExdApiSimple
 from tests.mock_servicer_context import MockServicerContext
 
 # pylint: disable=no-member
@@ -17,8 +17,8 @@ class TestExdApi(unittest.TestCase):
 
     def setUp(self):
         """Register ExternalDataFile handler before each test."""
-        ExternalDataPandas.register(ExternalFileData)
-        FileHandlerRegistry.register(file_type_name="test", factory=ExternalDataFile.create)
+        ExdApiSimple.register(ExternalFileData)
+        FileHandlerRegistry.register(file_type_name="test", factory=ExdApiSimpleImpl.create)
         self.context = MockServicerContext()
 
     def _get_example_file_path(self, file_name):

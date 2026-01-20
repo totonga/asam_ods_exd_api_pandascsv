@@ -13,7 +13,7 @@ from ods_exd_api_box.utils import ParamParser
 from ods_exd_api_box.utils.attribute_helper import AttributeHelper
 from ods_exd_api_box.utils.time_helper import TimeHelper
 
-from external_data_pandas import ExternalDataPandas
+from exd_api_simple import ExdApiSimple
 
 # pylint: disable=no-member
 
@@ -23,7 +23,7 @@ class FileCache:
         self._lock = threading.Lock()
         self._file_path = file_path
         self._parameters: dict = parameters
-        self._edp: ExternalDataPandas | None = None
+        self._edp: ExdApiSimple | None = None
         self._datatypes: list[ods.DataTypeEnum] | None = None
 
     def close(self):
@@ -82,10 +82,10 @@ class FileCache:
     def __data(self) -> pd.DataFrame:
         return self._external_data_pandas().data()
 
-    def _external_data_pandas(self) -> ExternalDataPandas:
+    def _external_data_pandas(self) -> ExdApiSimple:
         with self._lock:
             if self._edp is None:
-                self._edp = ExternalDataPandas.create(self._file_path, self._parameters)
+                self._edp = ExdApiSimple.create(self._file_path, self._parameters)
             return self._edp
 
     def _get_datatype(self, data_type: np.dtype) -> ods.DataTypeEnum:
@@ -120,7 +120,7 @@ class FileCache:
         raise NotImplementedError(f"Unknown type {data_type}!")
 
 
-class ExternalDataFile(ExdFileInterface):
+class ExdApiSimpleImpl(ExdFileInterface):
     """Class for handling file content."""
 
     @classmethod

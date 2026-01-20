@@ -12,7 +12,7 @@ RUN useradd -ms /bin/bash appuser && chown -R appuser /app
 COPY pyproject.toml .
 # Install required packages
 RUN pip3 install --upgrade pip && pip3 install .
-COPY external_data_file.py external_file_data.py external_data_pandas.py ./
+COPY exd_api_simple_impl.py external_file_data.py exd_api_simple.py ./
 USER appuser
 # Start server
 CMD [ "python3", "external_file_data.py"]

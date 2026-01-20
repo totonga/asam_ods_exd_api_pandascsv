@@ -5,24 +5,24 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 
-class ExternalDataPandas(ABC):
+class ExdApiSimple(ABC):
     """
     Class to read data from an external file using pandas.
     """
 
-    _implementation: type["ExternalDataPandas"] | None = None
+    _implementation: type["ExdApiSimple"] | None = None
 
     @classmethod
-    def register(cls, implementation: type["ExternalDataPandas"]) -> None:
+    def register(cls, implementation: type["ExdApiSimple"]) -> None:
         """Register a concrete implementation.
 
         Args:
-            implementation: The concrete class implementing ExternalDataPandas
+            implementation: The concrete class implementing ExdApiSimple
         """
         cls._implementation = implementation
 
     @classmethod
-    def create(cls, file_path: str, parameters: dict) -> "ExternalDataPandas":
+    def create(cls, file_path: str, parameters: dict) -> "ExdApiSimple":
         """Factory method to create a file handler instance.
 
         Args:
@@ -35,9 +35,9 @@ class ExternalDataPandas(ABC):
         Raises:
             RuntimeError: If no implementation is registered
         """
-        if cls is ExternalDataPandas:
+        if cls is ExdApiSimple:
             if cls._implementation is None:
-                raise RuntimeError("No implementation registered. Call ExternalDataPandas.register() first.")
+                raise RuntimeError("No implementation registered. Call ExdApiSimple.register() first.")
             return cls._implementation.create(file_path, parameters)
         raise NotImplementedError(f"Subclass {cls.__name__} must implement create()")
 

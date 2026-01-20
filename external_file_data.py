@@ -7,17 +7,17 @@ from typing import override
 
 import pandas as pd
 
-from external_data_pandas import ExternalDataPandas
+from exd_api_simple import ExdApiSimple
 
 
-class ExternalFileData(ExternalDataPandas):
+class ExternalFileData(ExdApiSimple):
     """
     Concrete implementation for reading CSV files.
     """
 
     @classmethod
     @override
-    def create(cls, file_path: str, parameters: str) -> ExternalDataPandas:
+    def create(cls, file_path: str, parameters: str) -> ExdApiSimple:
         """Factory method to create a file handler instance."""
         return cls(file_path, parameters)
 
@@ -78,7 +78,7 @@ class ExternalFileData(ExternalDataPandas):
 
 if __name__ == "__main__":
     from ods_exd_api_box import serve_plugin
-    from external_data_file import ExternalDataFile
+    from exd_api_simple_impl import ExdApiSimpleImpl
 
-    ExternalDataPandas.register(ExternalFileData)
-    serve_plugin("PANDASCSV", ExternalDataFile.create, ["*.csv"])
+    ExdApiSimple.register(ExternalFileData)
+    serve_plugin("PANDASCSV", ExdApiSimpleImpl.create, ["*.csv"])
