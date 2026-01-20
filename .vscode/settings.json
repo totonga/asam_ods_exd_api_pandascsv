@@ -16,7 +16,12 @@
         "source.organizeImports": "always",
     },
     "cSpell.words": [
-        "dtypes"
+        "dataframe",
+        "DCOMPLEX",
+        "dtypes",
+        "issubdtype",
+        "PANDASCSV",
+        "tobytes"
     ],
     "python.testing.unittestArgs": [
         "-v",

@@ -77,7 +77,7 @@ class ExternalFileData:
 
     def column_names(self) -> list[str] | None:
         """
-        Alllows to overwrite the column names of the dataframe.
+        Allows to overwrite the column names of the dataframe.
         If None is returned, the original column names are used.
         :return: List of column names.
         """

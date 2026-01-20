@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """EXD API implementation for CSV files"""
 
 from __future__ import annotations
@@ -22,8 +23,8 @@ class FileCache:
         self.__lock = threading.Lock()
         self.__file_path = file_path
         self.__parameters: dict = parameters
-        self.__efd: ExternalFileData = None
-        self.__datatypes = None
+        self.__efd: ExternalFileData | None = None
+        self.__datatypes: list[ods.DataTypeEnum] | None = None
 
     def close(self):
         with self.__lock:
@@ -32,7 +33,7 @@ class FileCache:
                 self.__efd = None
                 self.__datatypes = None
 
-    def column_datatype(self, index: int):
+    def column_datatype(self, index: int) -> ods.DataTypeEnum:
         if self.__datatypes is None:
             self.__datatypes = self.column_datatypes()
 
@@ -137,7 +138,7 @@ class FileCache:
 
 
 class ExternalDataFile(ExdFileInterface):
-    """Class for handling for NI tdms files."""
+    """Class for handling file content."""
 
     @classmethod
     @override
