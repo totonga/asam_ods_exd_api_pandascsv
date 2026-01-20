@@ -46,6 +46,10 @@ max-line-length = 119
 [tool.black]
 line-length = 119
 
+[tool.flake8]
+extend-ignore = ["E203"]
+max-line-length = 119
+
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true

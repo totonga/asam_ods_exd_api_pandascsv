@@ -4,7 +4,8 @@
     "files.trimTrailingWhitespace": true,
     "files.autoSave": "onFocusChange",
     "flake8.args": [
-        "--max-line-length=119"
+        "--max-line-length=119",
+        "--extend-ignore=E203"
     ],
     "black-formatter.args": [
         "--line-length=119"
@@ -23,6 +24,13 @@
         "PANDASCSV",
         "tobytes"
     ],
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.rulers": [
+            119
+        ]
+    },
     "python.testing.unittestArgs": [
         "-v",
         "-s",

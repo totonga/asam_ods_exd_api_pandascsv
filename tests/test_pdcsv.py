@@ -1,11 +1,10 @@
-import os
-
 import logging
+import os
 import pathlib
+import tempfile
 import unittest
 
 import pandas as pd
-import tempfile
 
 
 class TestPdCsv(unittest.TestCase):

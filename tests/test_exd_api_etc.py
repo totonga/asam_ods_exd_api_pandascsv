@@ -1,10 +1,12 @@
-import unittest
-import pathlib
-import logging
 import base64
+import logging
+import pathlib
+import unittest
 
 import grpc
-from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
+from ods_exd_api_box import (ExternalDataReader, FileHandlerRegistry, exd_api,
+                             ods)
+
 from external_data_file import ExternalDataFile
 from tests.mock_servicer_context import MockServicerContext
 

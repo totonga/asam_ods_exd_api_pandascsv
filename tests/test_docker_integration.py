@@ -5,7 +5,6 @@ import time
 import unittest
 
 import grpc
-
 from ods_exd_api_box import exd_api, exd_grpc, ods
 
 # pylint: disable=no-member
