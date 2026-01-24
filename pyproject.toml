@@ -27,7 +27,9 @@ dev = [
     "jupyterlab>=4.0",
     "mypy>=1.5",
     "types-protobuf",
-    "types-grpcio"
+    "types-grpcio",
+    "flake8",
+    "flake8-pyproject"
 ]
 
 [project.urls]
@@ -49,6 +51,7 @@ profile = "black"
 
 [tool.black]
 line-length = 119
+target-version = ["py312"]
 
 [tool.flake8]
 extend-ignore = ["E203"]
