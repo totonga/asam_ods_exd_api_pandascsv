@@ -1,17 +1,13 @@
 # ASAM ODS EXD-API pandas csv plugin
 
 This repository contains a [ASAM ODS EXD-API](https://www.asam.net/standards/detail/ods/) plugin that uses pandas to read the CSV files.
+To implement the plugin [ods_exd_api_box](https://github.com/totonga/ods-exd-api-box) is used.
 
 ## Content
 
 ### `external_file_data.py`
 
 Reads CSV files into pandas dataframe to be used by EXD-API.
-
-### `external_data_reader.py`
-
-Implements the EXD-API interface to allow simple pandas dataframe implementations.
-It includes data conversion and caching. The CSV implementation is given in `external_file_data.py`.
 
 ### `example_access_exd_api.ipynb`
 
