@@ -6,7 +6,7 @@ import unittest
 import grpc
 from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
 
-from exd_file_simple import ExdFileSimple, ExdFileSimpleRegistry
+from ods_exd_api_box.simple.file_simple import FileSimple, FileSimpleRegistry
 from external_file_data import ExternalFileData
 from tests.mock_servicer_context import MockServicerContext
 
@@ -18,8 +18,8 @@ class TestExdApiEtc(unittest.TestCase):
 
     def setUp(self):
         """Register ExternalDataFile handler before each test."""
-        ExdFileSimpleRegistry.register(ExternalFileData.create)
-        FileHandlerRegistry.register(file_type_name="test", factory=ExdFileSimple)
+        FileSimpleRegistry.register(ExternalFileData.create)
+        FileHandlerRegistry.register(file_type_name="test", factory=FileSimple)
         self.context = MockServicerContext()
 
     def _get_example_file_path(self, file_name):
