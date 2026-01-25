@@ -7,17 +7,17 @@ from typing import override
 
 import pandas as pd
 
-from exd_file_simple_interface import ExdFileSimpleInterface
+from ods_exd_api_box.simple.file_simple_interface import FileSimpleInterface
 
 
-class ExternalFileData(ExdFileSimpleInterface):
+class ExternalFileData(FileSimpleInterface):
     """
     Concrete implementation for reading CSV files.
     """
 
     @classmethod
     @override
-    def create(cls, file_path: str, parameters: dict) -> ExdFileSimpleInterface:
+    def create(cls, file_path: str, parameters: dict) -> FileSimpleInterface:
         """Factory method to create a file handler instance."""
         return cls(file_path, parameters)
 
@@ -73,11 +73,13 @@ class ExternalFileData(ExdFileSimpleInterface):
             except pd.errors.ParserError as e:
                 self.log.info("Not My File: Error reading file %s: %s", self.file_path, e)
                 self.df = pd.DataFrame()
+        if self.df is None:
+            self.df = pd.DataFrame()
         return self.df
 
 
 if __name__ == "__main__":
-    from exd_file_simple import serve_plugin_simple
+    from ods_exd_api_box.simple import serve_plugin_simple
 
     serve_plugin_simple(
         file_type_name="PANDASCSV", file_type_factory=ExternalFileData.create, file_type_file_patterns=["*.csv"]
